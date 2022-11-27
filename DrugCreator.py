@@ -62,11 +62,13 @@ def main():
         elif event == 'ERROR':
             gui.popup_ok(values[event], modal=True, font=('_ 15'), keep_on_top='True', title='Error', icon=(resource_path('Resources/needle.ico')))
         elif event == 'EXPORT':
-            Thread(target=saveDrug, args=(values[event]), daemon=True).start()
-
+            Thread(target=saveDrug, args=(window, *values[event]), daemon=True).start()
+        elif event == 'MSG':
+            gui.popup_auto_close(values[event], auto_close_duration=3, modal=True, font=('_ 15'), keep_on_top='True', title='File Saved', icon=(resource_path('Resources/needle.ico')))
+            window.write_event_value('Exit', '')
     window.close()
 
-def saveDrug(name, unit, sizeList):
+def saveDrug(window: gui.Window, name, unit, sizeList):
     drug = {"name": name,
         "sizes": sizeList,
         "unit": unit
@@ -78,6 +80,7 @@ def saveDrug(name, unit, sizeList):
     with open(str(loc + '\\' + drug['name'] + ".json"), "w") as file:
         file.write(data)
     # print('Saved file')
+    window.write_event_value('MSG', 'File was saved successfully.')
 
 def checkInputs(window: gui.Window, name: str, unit: str, sizes: list):
     ret = True
