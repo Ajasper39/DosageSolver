@@ -16,7 +16,7 @@ def doseSolverGui():
     gui.theme('Light Green 3')
     guiLayout = [
         [gui.Text('Drug:'), gui.Combo(['None'],  size=(15, 0), readonly=True, bind_return_key=True, enable_events=True, key='DRUG')],
-        [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True), gui.Text('mg', key='DRUG_UNITS', enable_events=True)],
+        [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True, metadata=0), gui.Text('mg', key='DRUG_UNITS', enable_events=True)],
         [gui.Button('Solve', disabled=True, enable_events=True, key='SOLVE', bind_return_key=True)],
         [gui.Table(values=TABLEDATA, headings=HEADINGS, col_widths=[10, 3], display_row_numbers=False, auto_size_columns=True, num_rows=5, visible=True, hide_vertical_scroll=True, key='TABLE')],
         [gui.Text('Waste:'), gui.Text('0', enable_events=True, key='WASTE'), gui.Text('mg', key='WASTE_UNITS', enable_events=True)],
@@ -32,8 +32,10 @@ def doseSolverGui():
         if event == gui.WIN_CLOSED or event is None:
             break
         elif event == 'DOSE':
-            if ret[event] and ret[event][-1] not in ('0123456789'):
-                window[event].update(ret[event][:-1])
+            if str(ret[event]).isnumeric() or ret[event] == '':
+                window[event].metadata = ret[event]
+            else:
+                window[event].update(window[event].metadata)
         elif event == 'FIND':
             Thread(target=getFiles, args=(window, drugsPath()), daemon=True).start()
         elif event == 'FILE':
@@ -43,7 +45,7 @@ def doseSolverGui():
             window['SOLVE'].update(disabled=False)
             window.write_event_value('DRUG', ret[event][0])
         elif event == 'SOLVE':
-            dose = int(ret['DOSE'])
+            dose = (lambda: int(ret['DOSE']), lambda: 0)[ret['DOSE'] == '']()
             name = str(window['DRUG'].metadata['name'])
             sizes = window['DRUG'].metadata['sizes']
             unit = str(window['DRUG'].metadata['unit'])

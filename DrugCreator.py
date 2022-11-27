@@ -7,8 +7,8 @@ from ResourcePath import resource_path
 def make_window():
     gui.theme('Light Blue 3')
     layout = [
-                [gui.Col([[gui.Col([[gui.Text('Name:', size=(5,1)), gui.Input('', size=(15, 1), enable_events=True, key='NAME')]])]])],
-                [gui.Col([[gui.Col([[gui.Text('Unit:', size=(5,1)), gui.Input(size=(3, 1), default_text='mg', justification='right', enable_events=True, key='UNIT')]])]])],
+                [gui.Col([[gui.Col([[gui.Text('Name:', size=(5,1)), gui.Input('', size=(15, 1), enable_events=True, key='NAME', metadata='')]])]])],
+                [gui.Col([[gui.Col([[gui.Text('Unit:', size=(5,1)), gui.Input(size=(3, 1), default_text='mg', justification='right', enable_events=True, key='UNIT', metadata='mg')]])]])],
                 [gui.Col([add_row(0), add_row(1)], key='SIZES')],
                 [gui.Col([[gui.Col([[gui.pin(gui.Button("Add", enable_events=True, key='ADD', bind_return_key=True)), gui.Button("Save", bind_return_key=True, enable_events=True, key='SAVE')]])]])]
     ]
@@ -17,7 +17,7 @@ def make_window():
 
 def add_row(index):
     row = [gui.pin(gui.Col([ [ gui.Text('Size:', size=(5,1)),
-                               gui.Input(size=(5,1), enable_events=True, default_text=0, justification='right', key=('SIZE', index)),
+                               gui.Input(size=(5,1), enable_events=True, default_text=0, justification='right', key=('SIZE', index), metadata=0),
                                gui.Button(gui.SYMBOL_X, border_width=0, key=('DEL', index))] ], key=('ROW', index) ) )
            ]
     return row
@@ -36,8 +36,10 @@ def main():
         if event in (gui.WIN_CLOSED, 'Exit'):
             break
         elif event in ('NAME', 'UNIT'):
-            if values[event] and not str(values[event][-1]).isalpha():
-                window[event].update(values[event][:-1]) #reset to previous string before invalid character was entered
+            if values[event] == '' or str(values[event]).isalpha():
+                window[event].metadata = values[event]
+            else:
+                window[event].update(window[event].metadata)
         elif event == 'ADD':
             vis = getVisibleCount(window)
             if vis < 5:
@@ -47,8 +49,10 @@ def main():
             if event[0] == 'DEL' and getVisibleCount(window) > 1:
                 window[('ROW', event[1])].update(visible=False)
             elif event[0] == 'SIZE':
-                if values[(event[0], event[1])] and not str(values[(event[0], event[1])][-1]).isnumeric():
-                    window[event].update(values[(event[0], event[1])][:-1])
+                if values[(event[0], event[1])] == '' or str(values[(event[0], event[1])]).isnumeric():
+                    window[(event[0], event[1])].metadata = values[(event[0], event[1])]
+                else:
+                    window[(event[0], event[1])].update(window[(event[0], event[1])].metadata)
         elif event == 'SAVE':
             name = window['NAME'].get().lower().capitalize()
             unit = window['UNIT'].get()
