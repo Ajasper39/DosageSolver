@@ -15,11 +15,11 @@ def doseSolverGui():
 
     gui.theme('Light Green 3')
     guiLayout = [
-        [gui.Text('Drug:'), gui.Combo([],  size=(15, 0), readonly=True, bind_return_key=True, enable_events=True, key='DRUG')],
-        [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True), gui.Text('mg')],
-        [gui.Button('Solve', disabled=True, enable_events=True, key='GETDRUG', bind_return_key=True)],
+        [gui.Text('Drug:'), gui.Combo(['None'],  size=(15, 0), readonly=True, bind_return_key=True, enable_events=True, key='DRUG')],
+        [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True), gui.Text('mg', key='DRUG_UNITS', enable_events=True)],
+        [gui.Button('Solve', disabled=True, enable_events=True, key='SOLVE', bind_return_key=True)],
         [gui.Table(values=TABLEDATA, headings=HEADINGS, col_widths=[10, 3], display_row_numbers=False, auto_size_columns=True, num_rows=5, visible=True, hide_vertical_scroll=True, key='TABLE')],
-        [gui.Text('Waste: 0mg', enable_events=True, key='WASTE')],
+        [gui.Text('Waste:'), gui.Text('0', enable_events=True, key='WASTE'), gui.Text('mg', key='WASTE_UNITS', enable_events=True)],
         [gui.Button('Add Drug', enable_events=True, key='ADD'), gui.Button('Refresh', enable_events=True, bind_return_key=False, key='FIND')]
     ]
 
@@ -40,23 +40,30 @@ def doseSolverGui():
             Thread(target=getNames, args=(window, ret[event]), daemon=True).start()
         elif event == 'LIST':
             window['DRUG'].update(value=ret[event][0], values=ret[event])
-            window['GETDRUG'].update(disabled=False)
-        elif event == 'GETDRUG':
-            # window['DRUG'].update(disabled=True)
-            # window['DOSE'].update(disabled=True)
-            Thread(target=readDrugInfo, args=(window, ret['DRUG'], drugsPath()), daemon=True).start()
+            window['SOLVE'].update(disabled=False)
+            window.write_event_value('DRUG', ret[event][0])
         elif event == 'SOLVE':
             dose = int(ret['DOSE'])
-            name = str(ret[event]['name'])
-            sizes = ret[event]['sizes']
-            unit = ret[event]['unit']
+            name = str(window['DRUG'].metadata['name'])
+            sizes = window['DRUG'].metadata['sizes']
+            unit = str(window['DRUG'].metadata['unit'])
             Thread(target=solveDose, args=(window, name, dose, sizes, unit), daemon=True).start()
         elif event == 'TABLE':
             window[event].update(values=ret[event])
         elif event == 'WASTE':
-            window[event].update(value=('Waste: {0}mg'.format(ret[event])))
+            window[event].update(value=('{0}'.format(ret[event])))
         elif event == 'ADD':
             Thread(target=drugCreator(), daemon=True).start()
+        elif event == 'UNITS':
+            window['DRUG_UNITS'].update(value='{0}'.format(ret[event]))
+            window['WASTE_UNITS'].update(value='{0}'.format(ret[event]))
+        elif event == 'DRUG':
+            window.write_event_value('CLEAR', '')
+            Thread(target=readDrugInfo, args=(window, ret['DRUG'], drugsPath()), daemon=True).start()
+        elif event == 'CLEAR':
+            window['TABLE'].update(values=TABLEDATA)
+            window['WASTE'].update(value=0)
+            window['DOSE'].update(value=0)
 
 def drugsPath():
     return path.normpath(getcwd() + "\\Drugs")
@@ -75,12 +82,13 @@ def getNames(window, files):
     # print(names)
     window.write_event_value('LIST', names)
 
-def readDrugInfo(window, name, loc):
+def readDrugInfo(window: gui.Window, name, loc):
     filePath = path.normpath(loc + "\\" + name + '.json')
     with open(filePath, 'r') as file:
         data = load(file)
-    # print(data)
-    window.write_event_value('SOLVE', data)
+    window['DRUG'].metadata = data
+    # print(window['DRUG'].metadata['unit'])
+    window.write_event_value('UNITS', window['DRUG'].metadata['unit'])
 
 def solveDose(window, name, dose, sizes, unit):
 
