@@ -1,2 +1,4 @@
-PuLP==2.6.0
+cplex==22.1.0.0
+docplex==2.24.232
 PySimpleGUI==4.60.4
+six==1.16.0

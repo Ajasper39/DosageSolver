@@ -1,8 +1,8 @@
 import PySimpleGUI as gui
+from docplex.mp.model import Model
 from json import load
 from os import getcwd, path, listdir
 from threading import Thread
-from pulp import LpMinimize, LpProblem, LpInteger, LpVariable, PULP_CBC_CMD
 from DrugCreator import main as drugCreator
 from ResourcePath import resource_path
 
@@ -47,7 +47,7 @@ def doseSolverGui():
         elif event == 'SOLVE':
             dose = (lambda: int(ret['DOSE']), lambda: 0)[ret['DOSE'] == '']()
             name = str(window['DRUG'].metadata['name'])
-            sizes = window['DRUG'].metadata['sizes']
+            sizes = sorted(window['DRUG'].metadata['sizes'], reverse=True)
             unit = str(window['DRUG'].metadata['unit'])
             Thread(target=solveDose, args=(window, name, dose, sizes, unit), daemon=True).start()
         elif event == 'TABLE':
@@ -94,32 +94,42 @@ def readDrugInfo(window: gui.Window, name, loc):
 
 def solveDose(window, name, dose, sizes, unit):
 
-    objFn = None
+    objFn = 0
     vars = []
     answer = []
+    values = {}
+    waste = 0
 
-    prob = LpProblem(name, LpMinimize)
+    prob = Model(name=name)
 
     for i, size in enumerate(sizes):
-        vars += [LpVariable(DICT[i], 0, cat=LpInteger)]
-        objFn += (vars[i] * size)
+        vars += [prob.integer_var(name=DICT[i], lb=0, ub=size)]
+        objFn = sum([objFn, vars[i] * size])
 
-    # print(vars)
-    # print(objFn)
-    constraint = (objFn >= dose)
+    prob.add_constraint(objFn >= dose)
+    prob.set_objective('min', objFn)
 
-    prob += objFn
-    prob += constraint
+    result = prob.solve()
+    result = str(result).splitlines()
 
-    prob.solve(PULP_CBC_CMD(msg=0))
+    for i, value in enumerate(result):
+        match(i):
+            case 0:
+                continue #solution name
+            case 1:
+                waste = int(value.split(':')[-1]) - dose #solution objective
+            case 2:
+                continue #solution status
+            case _:
+                var = value.split('=')
+                values.update({str(var[0]) : int(var[1])})
 
     for i in range(len(sizes)):
-        answer += [[str(str(sizes[i]) + str(unit)), int(vars[i].varValue)]]
+        temp = (lambda: values.get(str(DICT[i])), lambda: 0)[values.get(str(DICT[i])) == None]()
+        answer += [[str(sizes[i]) + str(unit), temp]]
 
-    waste = int(abs(prob.objective.value() - dose))
-
+    # print(values)
     # print(answer)
-    # print(dict(zip(sizes, values)))
     # print(waste)
 
     window.write_event_value('TABLE', answer)
