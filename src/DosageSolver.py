@@ -15,7 +15,7 @@ def doseSolverGui():
 
     gui.theme('Light Green 3')
     guiLayout = [
-        [gui.Text('Drug:'), gui.Combo(['None'],  size=(15, 0), readonly=True, bind_return_key=True, enable_events=True, key='DRUG')],
+        [gui.Text('Drug:'), gui.Combo(['None'], readonly=True, auto_size_text=True, size=(15, 5), bind_return_key=True, enable_events=True, key='DRUG')],
         [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True, metadata=0), gui.Text('mg', key='DRUG_UNITS', enable_events=True)],
         [gui.Button('Solve', disabled=True, enable_events=True, key='SOLVE', bind_return_key=True)],
         [gui.Table(values=TABLEDATA, headings=HEADINGS, col_widths=[10, 3], display_row_numbers=False, auto_size_columns=True, num_rows=5, visible=True, hide_vertical_scroll=True, key='TABLE')],
