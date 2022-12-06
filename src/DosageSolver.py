@@ -1,7 +1,7 @@
 import PySimpleGUI as gui
 from docplex.mp.model import Model
 from json import load
-from os import getcwd, path, listdir
+from os import getcwd, path, listdir, mkdir
 from threading import Thread
 from DrugCreator import main as drugCreator
 from ResourcePath import resource_path
@@ -15,7 +15,7 @@ def doseSolverGui():
 
     gui.theme('Light Green 3')
     guiLayout = [
-        [gui.Text('Drug:'), gui.Combo(['None'],  size=(15, 0), readonly=True, bind_return_key=True, enable_events=True, key='DRUG')],
+        [gui.Text('Drug:'), gui.Combo(['None'], readonly=True, auto_size_text=True, size=(15, 5), bind_return_key=True, enable_events=True, key='DRUG')],
         [gui.Text('Dose:'), gui.Input(justification='right', default_text=0, size=(6, 1), key='DOSE', enable_events=True, metadata=0), gui.Text('mg', key='DRUG_UNITS', enable_events=True)],
         [gui.Button('Solve', disabled=True, enable_events=True, key='SOLVE', bind_return_key=True)],
         [gui.Table(values=TABLEDATA, headings=HEADINGS, col_widths=[10, 3], display_row_numbers=False, auto_size_columns=True, num_rows=5, visible=True, hide_vertical_scroll=True, key='TABLE')],
@@ -24,6 +24,7 @@ def doseSolverGui():
     ]
 
     window = gui.Window('Dosage Solver', size=(400, 350), resizable=True, icon=resource_path('Resources/needle.ico'), element_justification='center', layout=guiLayout, finalize=True, font=('_ 15'))
+    window.TKroot.minsize(400, 350)
 
     window.write_event_value('FIND', '')
 
@@ -68,31 +69,47 @@ def doseSolverGui():
             window['DOSE'].update(value=0)
 
 def drugsPath():
-    return path.normpath(getcwd() + "\\Drugs")
+    try:
+        dir = path.normpath(getcwd() + "\\Drugs")
+        if not path.exists(dir):
+            raise FileNotFoundError
+    except FileNotFoundError:
+        mkdir(dir)
+    finally:
+        return dir
 
-def getFiles(window, loc):
+def getFiles(window: gui.Window, loc: path):
     files = []
     if path.isdir(loc):
         files += [path.normpath(loc + "\\" + file) for file in listdir(loc) if file.endswith('.json')]
+
+    if len(files) == 0:
+        files += ['None']
     # print(files)
     window.write_event_value('FILE', files)
 
-def getNames(window, files):
+def getNames(window: gui.Window, files: list):
     names = []
     for file in files:
         names += [str(file.split("\\")[-1]).replace('.json', '')]
     # print(names)
     window.write_event_value('LIST', names)
 
-def readDrugInfo(window: gui.Window, name, loc):
-    filePath = path.normpath(loc + "\\" + name + '.json')
-    with open(filePath, 'r') as file:
-        data = load(file)
-    window['DRUG'].metadata = data
-    # print(window['DRUG'].metadata['unit'])
-    window.write_event_value('UNITS', window['DRUG'].metadata['unit'])
+def readDrugInfo(window: gui.Window, name: str, loc: path):
+    try:
+        filePath = path.normpath(loc + "\\" + name + '.json')
+        if path.exists(filePath):
+            with open(filePath, 'r') as file:
+                data = load(file)
+                window['DRUG'].metadata = data
+                # print(window['DRUG'].metadata['unit'])
+                window.write_event_value('UNITS', window['DRUG'].metadata['unit'])
+        else:
+            raise FileNotFoundError
+    except FileNotFoundError:
+        window['SOLVE'].update(disabled=True)
 
-def solveDose(window, name, dose, sizes, unit):
+def solveDose(window: gui.Window, name: str, dose: int, sizes: list, unit: str):
 
     objFn = 0
     vars = []
