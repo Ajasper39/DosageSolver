@@ -1,7 +1,7 @@
 import PySimpleGUI as gui
 from docplex.mp.model import Model
 from json import load
-from os import getcwd, path, listdir
+from os import getcwd, path, listdir, mkdir
 from threading import Thread
 from DrugCreator import main as drugCreator
 from ResourcePath import resource_path
@@ -68,31 +68,47 @@ def doseSolverGui():
             window['DOSE'].update(value=0)
 
 def drugsPath():
-    return path.normpath(getcwd() + "\\Drugs")
+    try:
+        dir = path.normpath(getcwd() + "\\Drugs")
+        if not path.exists(dir):
+            raise FileNotFoundError
+    except FileNotFoundError:
+        mkdir(dir)
+    finally:
+        return dir
 
-def getFiles(window, loc):
+def getFiles(window: gui.Window, loc: path):
     files = []
     if path.isdir(loc):
         files += [path.normpath(loc + "\\" + file) for file in listdir(loc) if file.endswith('.json')]
+
+    if len(files) == 0:
+        files += ['None']
     # print(files)
     window.write_event_value('FILE', files)
 
-def getNames(window, files):
+def getNames(window: gui.Window, files: list):
     names = []
     for file in files:
         names += [str(file.split("\\")[-1]).replace('.json', '')]
     # print(names)
     window.write_event_value('LIST', names)
 
-def readDrugInfo(window: gui.Window, name, loc):
-    filePath = path.normpath(loc + "\\" + name + '.json')
-    with open(filePath, 'r') as file:
-        data = load(file)
-    window['DRUG'].metadata = data
-    # print(window['DRUG'].metadata['unit'])
-    window.write_event_value('UNITS', window['DRUG'].metadata['unit'])
+def readDrugInfo(window: gui.Window, name: str, loc: path):
+    try:
+        filePath = path.normpath(loc + "\\" + name + '.json')
+        if path.exists(filePath):
+            with open(filePath, 'r') as file:
+                data = load(file)
+                window['DRUG'].metadata = data
+                # print(window['DRUG'].metadata['unit'])
+                window.write_event_value('UNITS', window['DRUG'].metadata['unit'])
+        else:
+            raise FileNotFoundError
+    except FileNotFoundError:
+        window['SOLVE'].update(disabled=True)
 
-def solveDose(window, name, dose, sizes, unit):
+def solveDose(window: gui.Window, name: str, dose: int, sizes: list, unit: str):
 
     objFn = 0
     vars = []
