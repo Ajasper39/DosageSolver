@@ -24,6 +24,7 @@ def doseSolverGui():
     ]
 
     window = gui.Window('Dosage Solver', size=(400, 350), resizable=True, icon=resource_path('Resources/needle.ico'), element_justification='center', layout=guiLayout, finalize=True, font=('_ 15'))
+    window.TKroot.minsize(400, 350)
 
     window.write_event_value('FIND', '')
 
